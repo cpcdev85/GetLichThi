@@ -1,0 +1,54 @@
+name: KMA Lich Thi Telegram
+
+on:
+  workflow_dispatch:
+    inputs:
+      mode:
+        description: 'preview: xem thử; send: gửi; auto: theo KMA_ENABLE_LICHTHI'
+        required: true
+        default: preview
+        type: choice
+        options:
+          - preview
+          - send
+          - auto
+      retry_uncertain:
+        description: 'Chỉ bật sau khi kiểm tra nhóm: cho gửi lại bước đang sending, có thể trùng tin'
+        required: false
+        default: false
+        type: boolean
+
+permissions:
+  contents: write
+
+concurrency:
+  group: kma-lichthi-telegram
+  cancel-in-progress: false
+
+jobs:
+  check-lichthi:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+          cache: pip
+          cache-dependency-path: requirements-lichthi.txt
+      - name: Install lichthi dependencies
+        run: python -m pip install -r requirements-lichthi.txt
+      - name: Check lichthi and send Telegram
+        env:
+          GH_STATE_TOKEN: ${{ github.token }}
+          TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
+          TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
+          TELEGRAM_THREAD_ID: ${{ secrets.TELEGRAM_THREAD_ID }}
+          KMA_ENABLE_LICHTHI: ${{ vars.KMA_ENABLE_LICHTHI || 'false' }}
+          KMA_LICHTHI_MODE: ${{ inputs.mode || 'auto' }}
+          KMA_LICHTHI_RETRY_UNCERTAIN: ${{ inputs.retry_uncertain || false }}
+        run: python -u kma_lichthi_actions.py
