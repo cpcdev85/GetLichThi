@@ -1,0 +1,26 @@
+{
+  "articles": {
+    "457": {
+      "id": 457,
+      "pending": true,
+      "title": "ke hoach to chuc thi kthp hoc ky 1 nam hoc 2026 2027 dot1 he ktxh",
+      "url": "https://ktdbcl.actvn.edu.vn/457-ke-hoach-to-chuc-thi-kthp-hoc-ky-1-nam-hoc-2026-2027-dot1-he-ktxh.html"
+    }
+  },
+  "deliveries": {},
+  "initialized": true,
+  "known_articles": [
+    "300",
+    "305",
+    "311",
+    "321",
+    "333",
+    "379",
+    "385",
+    "396",
+    "411",
+    "457"
+  ],
+  "pdfs": {},
+  "version": 1
+}
