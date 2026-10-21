@@ -12,8 +12,9 @@
       "checked": "21/10/2026 20:42:37",
       "steps": {
         "json": {
-          "status": "sending",
-          "time": "2026-10-21T13:43:02.442609+00:00"
+          "message_id": 415,
+          "status": "sent",
+          "time": "2026-10-21T13:43:04.306061+00:00"
         },
         "notice": {
           "message_id": 413,
