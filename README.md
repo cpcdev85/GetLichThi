@@ -184,9 +184,10 @@ Ví dụ minh họa:
 📢 CÓ LỊCH THI MỚI
 
 Kế hoạch Tổ chức thi KTHP Học kỳ 1 năm học 2026-2027. Đợt1 (Hệ KTXH)
-🔗 https://ktdbcl.actvn.edu.vn/457-ke-hoach-to-chuc-thi-kthp-hoc-ky-1-nam-hoc-2026-2027-dot1-he-ktxh.html
 Ngày chỉnh sửa: 06/Oct/2026
-Kiểm tra: 21/10/2026 18:00:02 (giờ Việt Nam)
+Kiểm tra: 21/10/2026 20:51:42 (giờ Việt Nam)
+
+🔗 https://ktdbcl.actvn.edu.vn/457-ke-hoach-to-chuc-thi-kthp-hoc-ky-1-nam-hoc-2026-2027-dot1-he-ktxh.html
 
 📎 File: https://ktdbcl.actvn.edu.vn/files/thong-bao/ke-hoach-thi/ke-hoach-thi-kthp-dot1-hk1-nh2627.pdf
 ```
@@ -194,9 +195,9 @@ Kiểm tra: 21/10/2026 18:00:02 (giờ Việt Nam)
 | Thông tin | Cách xác định |
 |---|---|
 | Tiêu đề | Lấy từ bài thông báo |
-| Link bài | Đường dẫn mở thông báo gốc |
 | Ngày chỉnh sửa | Ưu tiên Last-Modified của PDF; nếu thiếu dùng metadata ngày sửa bài |
 | Thời điểm kiểm tra | Thời gian bắt đầu lượt chạy, theo giờ Việt Nam |
+| Link bài | Đường dẫn mở thông báo gốc |
 | File PDF | Tài liệu gốc tải từ website trường |
 | File JSON | Dữ liệu lịch thi đã trích xuất, chuẩn hóa và gộp ca |
 
