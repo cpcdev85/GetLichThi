@@ -11,6 +11,10 @@
     "446ebb32641c9bccb8a332bacf2a6b20f4f21920f582edf993427d11d89d914e": {
       "checked": "21/10/2026 20:51:42",
       "steps": {
+        "json": {
+          "status": "sending",
+          "time": "2026-10-21T13:52:11.107985+00:00"
+        },
         "notice": {
           "message_id": 419,
           "status": "sent",
