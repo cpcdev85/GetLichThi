@@ -1,4 +1,4 @@
-# GetLichThi — Tự động theo dõi lịch thi KMA
+# GetLichThi - Tự động theo dõi lịch thi KMA
 
 Dự án KMA Schedule được phát triển bởi cPcDev.
 
@@ -316,7 +316,7 @@ Không thu hồi PAT hoặc token bot đang được hệ thống khác sử d�
 
 ## 13. Tài liệu tham khảo
 
-- [Telegram Bot API — sendDocument](https://core.telegram.org/bots/api#senddocument)
-- [GitHub — Workflow dispatch](https://docs.github.com/en/rest/actions/workflows#create-a-workflow-dispatch-event)
-- [GitHub — Sử dụng Secrets trong Actions](https://docs.github.com/en/actions/security-for-github-actions/security-guides/using-secrets-in-github-actions)
-- [GitHub — Cú pháp workflow](https://docs.github.com/en/actions/writing-workflows/workflow-syntax-for-github-actions)
+- [Telegram Bot API - sendDocument](https://core.telegram.org/bots/api#senddocument)
+- [GitHub - Workflow dispatch](https://docs.github.com/en/rest/actions/workflows#create-a-workflow-dispatch-event)
+- [GitHub - Sử dụng Secrets trong Actions](https://docs.github.com/en/actions/security-for-github-actions/security-guides/using-secrets-in-github-actions)
+- [GitHub - Cú pháp workflow](https://docs.github.com/en/actions/writing-workflows/workflow-syntax-for-github-actions)
