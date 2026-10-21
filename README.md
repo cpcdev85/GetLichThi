@@ -1,245 +1,321 @@
-# GetLichThi — KMA Lịch thi → Telegram
+# GetLichThi — Tự động theo dõi lịch thi KMA
 
 Dự án KMA Schedule được phát triển bởi cPcDev.
 
-Dự án độc lập tại **`cpcdev85/GetLichThi`**, chạy trên GitHub Actions và được cron hosting gọi định kỳ. Nó theo dõi **lịch thi kết thúc học phần**, gửi thông báo, PDF gốc và JSON đã xử lý vào nhóm Telegram. Không đăng nhập hoặc nhập lịch thi lên web admin.
+**GetLichThi** theo dõi thông báo thi kết thúc học phần của Học viện Kỹ thuật Mật mã, xử lý PDF thành JSON và gửi kết quả vào nhóm Telegram. Hệ thống chạy bằng **GitHub Actions**, được kích hoạt định kỳ từ **cron hosting**, không cần bật máy tính cá nhân.
 
-## 1. Tạo repository và tải mã nguồn
+Repository: [cpcdev85/GetLichThi](https://github.com/cpcdev85/GetLichThi)
 
-```text
-.github/workflows/check_lichthi.yml
-kma_lichthi_actions.py
-kma_lichthi_core.py
-requirements-lichthi.txt
-README.md
-```
+## 1. Cách hoạt động
 
-Tạo repository tên **`GetLichThi`** trong tài khoản **`cpcdev85`**. Đưa 5 file này lên nhánh mặc định **`main`**, đúng cấu trúc trên. File Python và README phải ở ngay thư mục gốc; không upload cả ZIP hoặc thư mục `getlichthi_package` làm thư mục cha.
+Mỗi lần cron kích hoạt workflow, hệ thống thực hiện:
 
-Nếu GitHub đã tạo README sẵn, thay bằng README trong ZIP. Code tự lấy repository đang chạy qua `GITHUB_REPOSITORY`, không cần nhập tên repo vào Python và không kết nối tới repo danh sách thi.
+1. Đọc trang thông báo chung và chuyên mục Lịch thi của trường.
+2. Lọc các bài phù hợp với thông báo kế hoạch/lịch thi kết thúc học phần.
+3. Lấy liên kết PDF trực tiếp hoặc PDF nhúng trong bài.
+4. Tải PDF, so sánh mã SHA-256 với lịch sử gửi.
+5. Trích bảng lịch thi, chuẩn hóa khóa đào tạo và gộp các ca phù hợp thành JSON.
+6. Gửi thông báo, PDF gốc và JSON đã xử lý vào nhóm Telegram.
+7. Ghi trạng thái vào `json/lichthi_state.json` trên nhánh **`main`** để tránh gửi lặp.
 
-Repo `GetDanhSachThi` tiếp tục chạy riêng. **Không cần chép code, Secrets admin hoặc file ghi nhớ từ repo đó sang GetLichThi.** Nếu đã cài workflow lịch thi trong repo cũ, tắt cron/workflow lịch thi cũ trước khi bật repo mới để tránh hai nơi cùng gửi; giữ workflow danh sách thi hoạt động.
+Hệ thống kiểm tra theo chu kỳ, không theo dõi liên tục theo thời gian thực. Thời điểm phát hiện phụ thuộc chu kỳ cron, hàng đợi GitHub và thời gian xử lý.
 
-Cách tải bằng giao diện GitHub:
+**Nguồn theo dõi:**
 
-1. Giải nén ZIP.
-2. Vào **cpcdev85/GetLichThi** → **Code → Add file → Upload files**. Tải 4 file ở thư mục gốc lên, rồi Commit changes.
-3. Với workflow, chọn **Add file → Create new file**, đặt tên chính xác `.github/workflows/check_lichthi.yml`, dán nội dung file cùng tên trong ZIP rồi Commit changes. Có thể upload nguyên thư mục `.github` nếu giao diện nhận được.
-4. Vào **Actions**, sẽ thấy workflow **KMA Lich Thi Telegram**. Nếu không thấy, kiểm tra workflow đã nằm trên nhánh mặc định và đúng đường dẫn ở bước 3.
+- [Trang thông báo chung](https://ktdbcl.actvn.edu.vn/)
+- [Chuyên mục Lịch thi](https://ktdbcl.actvn.edu.vn/khao-thi/to-chuc-thi/lich-thi.html)
 
-Chưa tạo sẵn file ghi nhớ rỗng trong ZIP. Khi chạy mode send hoặc auto đang bật, workflow tự tạo **`json/lichthi_state.json` ngay trên nhánh `main`**. Không cần tạo nhánh ghi nhớ riêng.
+GetLichThi hoạt động độc lập với repository `GetDanhSachThi`. Kết quả lịch thi được gửi về Telegram, không tự nhập lên web admin.
 
-**Cập nhật từ bản cũ:** tạm tắt cron lịch thi, chờ/hủy các lượt đang chạy, thay `kma_lichthi_actions.py` và README này trên main rồi chạy send. Nếu main chưa có file ghi nhớ, code tự đọc và sao chép ghi nhớ từ nhánh cũ `kma-lichthi-state` sang main trước khi gửi. Giữ nguyên các bước sent/sending; không tự gửi lại bước đã sent. Bản ghi nhớ cũ không bị xóa. Nếu main đã có file thì dùng bản trên main, không ghi đè bằng bản cũ. Sau khi kiểm tra file trên main và lượt chạy thành công, bật lại cron. Không xóa ghi nhớ cũ trước khi chuyển xong.
+## 2. Yêu cầu triển khai
 
-## 2. Cấu hình bot Telegram
+- Repository **`cpcdev85/GetLichThi`**, nhánh mặc định **`main`**.
+- GitHub Actions được bật và được phép ghi nội dung repository.
+- Hosting có Cron Jobs, hỗ trợ `curl` và kết nối HTTPS đến `api.github.com`.
+- Bot Telegram có quyền gửi tin nhắn và tài liệu vào nhóm nhận.
+- Token bot và ID nhóm đã được chuẩn bị.
 
-Nếu bạn đã có bot đang gửi danh sách thi, có thể dùng lại bot và nhóm đó. Chức năng gửi này không nhận lệnh, không dùng `getUpdates`, không thay đổi webhook của bot hiện có.
+Ba loại thông tin xác thực được sử dụng:
 
-Nếu chưa có bot: mở Telegram → tìm **@BotFather** chính thức → `/newbot` → làm theo hướng dẫn để lấy token.
+| Thông tin | Nơi cấu hình | Mục đích |
+|---|---|---|
+| Token bot Telegram | Repository Secrets | Gửi thông báo và tài liệu |
+| Personal access token GitHub (PAT) | Cron trên hosting | Kích hoạt workflow |
+| `GITHUB_TOKEN` | GitHub tự cấp từng lượt chạy | Đọc và ghi lịch sử xử lý |
 
-Thêm bot vào nhóm nhận lịch thi, cho phép bot gửi tin nhắn và tài liệu. Nhóm thông thường không bắt buộc bot làm quản trị viên nếu quyền thành viên đã cho gửi. Với channel, bot cần quyền đăng bài phù hợp.
+Không cần tài khoản, mật khẩu hoặc URL admin của KMA Schedule cho repository này.
 
-Tại repository **GetLichThi** → **Settings → Secrets and variables → Actions → Secrets → New repository secret**, thêm:
+## 3. Tải mã nguồn lên GitHub
 
-| Name | Secret cần điền |
+Tạo repository tên **GetLichThi**, sau đó đưa các file vào đúng đường dẫn:
+
+| Đường dẫn | Chức năng |
 |---|---|
-| `TELEGRAM_BOT_TOKEN` | Token của bot, dạng `123456789:...`; không có chữ `bot` ở đầu, không có dấu nháy |
-| `TELEGRAM_CHAT_ID` | ID nhóm, thường là số âm như `-1001234567890`; dùng đúng ID nhóm bạn muốn nhận |
-| `TELEGRAM_THREAD_ID` | Không bắt buộc. ID topic nếu gửi vào một topic của nhóm forum; không dùng thì bỏ qua Secret này |
+| `kma_lichthi_actions.py` | Điều phối lượt kiểm tra, gửi Telegram và lưu ghi nhớ |
+| `kma_lichthi_core.py` | Lọc thông báo, đọc PDF, chuẩn hóa và gộp lịch thi |
+| `requirements-lichthi.txt` | Các thư viện Python cần cài |
+| `.github/workflows/check_lichthi.yml` | Cấu hình workflow GitHub Actions |
+| `README.md` | Tài liệu cài đặt và vận hành |
+| `json/lichthi_state.json` | Hệ thống tự tạo trên main khi bắt đầu hoạt động gửi |
 
-Token và chat ID lấy từ cấu hình bot cũ của bạn là thuận tiện nhất. Không đưa token vào file Python, README, commit, lệnh cron hoặc ảnh chụp công khai.
+**Các bước tải lên bằng giao diện GitHub:**
 
-Nếu chưa biết ID nhóm và đang dùng **bot mới, không có webhook**:
+1. Giải nén bộ mã nguồn.
+2. Vào repository → **Code → Add file → Upload files**.
+3. Tải các file ở thư mục gốc lên, rồi **Commit changes** vào `main`.
+4. Nếu thư mục `.github` chưa được tải lên, chọn **Add file → Create new file**.
+5. Nhập tên `.github/workflows/check_lichthi.yml`, dán nội dung workflow tương ứng và commit.
+6. Vào **Actions**, kiểm tra đã xuất hiện workflow **KMA Lich Thi Telegram**.
 
-1. Thêm bot vào nhóm; gửi `/check@TenUsernameBot` trong nhóm.
-2. Chạy đoạn sau bằng Python trên máy bạn. Nhập token ở lời nhắc, token sẽ không hiển thị. Không đưa đoạn cấu hình chứa token thật lên GitHub.
+Đưa các file trực tiếp vào thư mục gốc; không tải nguyên ZIP hoặc đặt thêm một thư mục bao ngoài. Không tạo thủ công file ghi nhớ rỗng.
 
-```python
-import getpass
-import json
-import urllib.request
+## 4. Cấu hình Secrets và Variable
 
-token = getpass.getpass("Token bot: ").strip()
-try:
-    with urllib.request.urlopen(
-        "https://api.telegram.org/bot" + token + "/getUpdates", timeout=30
-    ) as response:
-        result = json.load(response)
-    for update in result.get("result", []):
-        message = update.get("message", {})
-        chat = message.get("chat", {})
-        if chat.get("type") in ("group", "supergroup"):
-            print("Nhóm:", chat.get("title"))
-            print("TELEGRAM_CHAT_ID:", chat.get("id"))
-            print("TELEGRAM_THREAD_ID (nếu có):", message.get("message_thread_id", ""))
-except Exception:
-    print("Không đọc được. Kiểm tra token, kết nối và bot có đang dùng webhook không.")
-```
+### Secrets Telegram
 
-Nếu bot hiện có đang chạy webhook hoặc một chương trình khác nhận cập nhật, lấy ID từ cấu hình chương trình đó. Không cần gỡ webhook để sử dụng bộ lịch thi.
+Trong repository **GetLichThi**, mở:
 
-## 3. Bật/tắt tự động bằng Variable
+**Settings → Secrets and variables → Actions → Secrets → New repository secret**
 
-Trong **GetLichThi**, vào **Settings → Secrets and variables → Actions → Variables → New repository variable**:
-
-- Name: `KMA_ENABLE_LICHTHI`
-- Value: `true`
-
-Đây là **Variable**, không phải Secret. Nó độc lập với Variable `KMA_ENABLE_UPLOAD` của danh sách thi.
-
-Các chế độ:
-
-| mode | Hành vi |
+| Name | Giá trị |
 |---|---|
-| `preview` | Đọc bài lịch thi mới nhất, tải PDF để kiểm tra và xử lý JSON; chỉ log tiêu đề, link, ngày và số dòng. Không gửi Telegram, không ghi file ghi nhớ |
-| `send` | Gửi thông báo + PDF + JSON cho các mục chưa gửi, kể cả khi Variable đang false; vẫn chống gửi lặp |
-| `auto` | Chỉ hoạt động khi `KMA_ENABLE_LICHTHI=true`; false/thiếu biến thì thoát ngay |
+| `TELEGRAM_BOT_TOKEN` | Token bot Telegram đang sử dụng |
+| `TELEGRAM_CHAT_ID` | ID nhóm nhận thông báo; thường là số âm |
+| `TELEGRAM_THREAD_ID` | Tùy chọn: ID topic trong nhóm forum; không dùng thì bỏ qua |
 
-Nếu repository chặn ghi, kiểm tra **Settings → Actions → General → Workflow permissions → Read and write permissions → Save**. YAML đã khai báo `contents: write`; nếu chính sách tổ chức chặn thì cần điều chỉnh chính sách tương ứng.
+Nhập giá trị trực tiếp, không thêm dấu nháy. Token và ID nhóm được giữ trong Secrets, không đưa vào mã nguồn hoặc file JSON.
 
-## 4. Kiểm tra trước khi đặt cron
+Có thể dùng chung token với bot webhook hiện có. GetLichThi chỉ gọi API gửi tin/tài liệu, không đăng ký lại webhook hoặc nhận cập nhật bằng `getUpdates`.
 
-1. Trong repo **GetLichThi**, vào **Actions → KMA Lich Thi Telegram → Run workflow**.
-2. Chọn nhánh `main`, mode **preview**, giữ **retry_uncertain=false**.
-3. Mở lượt chạy → job **check-lichthi** → bước **Check lichthi and send Telegram**.
-4. Kiểm tra số dòng lịch thi và mẫu tin trong log. Preview thành công không chứng minh bot có quyền gửi, vì chưa gọi Telegram.
-5. Chạy lại mode **send**, giữ retry_uncertain=false. Lần gửi đầu chỉ lấy bài lịch thi phù hợp mới nhất, tránh gửi toàn bộ bài cũ. Bài mới nhất có thể đã đăng từ nhiều ngày trước.
-6. Nhóm sẽ nhận tin thông báo, một PDF và một JSON cho mỗi PDF hợp lệ trong bài.
-7. Chạy lại mode **send** để thử chống lặp. Nội dung PDF không đổi sẽ báo đã gửi đủ và bỏ qua.
+### Variable bật tự động
 
-File ghi nhớ xem tại **Code → main → json → lichthi_state.json**. Không xóa file này để thử cron: mất ghi nhớ có thể làm gửi lại lịch cũ. Preview không tạo thư mục `json` là bình thường.
+Mở **Settings → Secrets and variables → Actions → Variables → New repository variable**:
 
-## 5. Nội dung gửi vào nhóm
+| Name | Value |
+|---|---|
+| `KMA_ENABLE_LICHTHI` | `true` |
 
-Mỗi PDF lịch thi hợp lệ có một thông báo dạng:
+Đây là **Variable**, không phải Secret. Đặt `false` để các lượt chạy chế độ `auto` thoát ngay. Biến này độc lập với cấu hình của repository danh sách thi.
 
-```text
-📢 CÓ LỊCH THI MỚI
+## 5. Quyền ghi lịch sử xử lý
 
-Kế hoạch Tổ chức thi KTHP Học kỳ 1 năm học 2026-2027. Đợt1 (Hệ KTXH)
-🔗 https://ktdbcl.actvn.edu.vn/457-...html
-Ngày chỉnh sửa: 21/Oct/2026
-Kiểm tra: 21/10/2026 18:00:02 (giờ Việt Nam)
+Workflow khai báo `contents: write` và sử dụng `${{ github.token }}` cho biến `GH_STATE_TOKEN`. Không cần tự tạo Secret có tên này.
 
-📎 File: https://ktdbcl.actvn.edu.vn/files/...pdf
-```
+Nếu workflow báo không có quyền ghi, kiểm tra:
 
-Sau đó bot gửi **PDF gốc** và **JSON đã xử lý** dưới dạng tài liệu, trả lời vào tin thông báo để dễ nhận biết. Bài có nhiều PDF thì gửi một bộ cho mỗi PDF đọc được. Tên file gửi được làm sạch và thêm mã nội dung để phân biệt các bản sửa.
+**Settings → Actions → General → Workflow permissions → Read and write permissions → Save**
 
-- Tiêu đề lấy từ tiêu đề bài viết; có đường dẫn mở bài và đường dẫn PDF riêng.
-- **Ngày chỉnh sửa** ưu tiên `Last-Modified` của PDF; nếu thiếu thì dùng metadata ngày sửa bài. Không có cả hai thì ghi rõ “Không có thông tin từ nguồn”, không lấy ngày kiểm tra thay ngày sửa.
-- **Kiểm tra** là thời điểm bắt đầu lượt chạy, định dạng giờ Việt Nam, không phụ thuộc múi giờ máy runner.
-- JSON gồm `Môn thi`, `Hình thức thi`, `Khóa đào tạo`, `Thời gian bắt đầu thi`.
-- Dùng lại thuật toán trích bảng/gộp ca/chuẩn hóa khóa của file `kmaschedulev6(2).pyw` bạn cung cấp. Không dùng OCR ảnh hoặc PDF scan trên runner. PDF ngoài định dạng hỗ trợ sẽ báo lỗi và chưa gửi bộ tin đó; không gửi JSON giả/rỗng.
-- Việc xử lý thành công không bảo đảm mọi dòng đều đúng nếu bố cục tài liệu khác mẫu; vẫn nên kiểm tra JSON trước khi nhập thủ công.
+Chính sách tổ chức hoặc quy tắc bảo vệ nhánh có thể hạn chế quyền ghi. Nếu main bị chặn cập nhật trực tiếp, cần cấu hình quyền phù hợp trước khi sử dụng. Khi không lưu được trạng thái, hệ thống sẽ dừng trước lần gửi tiếp theo.
 
-## 6. Cron hosting
+## 6. Chạy thử và kiểm tra kết quả
 
-Bộ này chỉ có `workflow_dispatch`, **không có cron GitHub**. Thêm một cron hosting riêng cho lịch thi, giữ cron danh sách thi hiện tại.
+Mở **Actions → KMA Lich Thi Telegram → Run workflow**, chọn nhánh **main**.
 
-Có thể dùng lại PAT hosting đang gọi workflow danh sách thi, nhưng phải cấp quyền thêm cho **GetLichThi**. Với fine-grained PAT: vào GitHub cá nhân → **Settings → Developer settings → Personal access tokens → Fine-grained tokens** → chọn token → **Repository access → Only select repositories** → thêm **GetLichThi**, giữ **GetDanhSachThi** nếu cron cũ đang dùng chung → **Repository permissions → Actions: Read and write** → lưu. Hoặc tạo PAT riêng chỉ dành cho GetLichThi với quyền tương tự. Không cần dùng PAT làm Secret `GH_STATE_TOKEN`; trong workflow, GH_STATE_TOKEN đã được lấy từ `github.token` tự động.
+| Chế độ | Hành vi |
+|---|---|
+| `preview` | Đọc bài mới nhất, xử lý PDF và hiển thị thông tin trong log; không gửi Telegram, không tạo hoặc chuyển ghi nhớ |
+| `send` | Gửi các mục chưa hoàn tất; vẫn chống lặp và không phụ thuộc Variable bật/tắt |
+| `auto` | Chạy khi `KMA_ENABLE_LICHTHI=true`; thiếu biến hoặc false thì thoát |
 
-Ví dụ mỗi 30 phút:
+**Trình tự kiểm tra:**
 
-```text
-Minute: */30
-Hour: *
-Day: *
-Month: *
-Weekday: *
-```
+1. Chạy `preview`, giữ **retry_uncertain=false**.
+2. Mở lượt chạy → job **check-lichthi** → bước **Check lichthi and send Telegram**.
+3. Kiểm tra tiêu đề, link nguồn, ngày và số dòng JSON trong log.
+4. Chạy `send`, giữ **retry_uncertain=false** để thử gửi thật.
+5. Kiểm tra nhóm nhận đủ thông báo, PDF và JSON.
+6. Chạy lại `send`: PDF không đổi và đã gửi đủ sẽ được bỏ qua.
+7. Vào **Code → main → json → lichthi_state.json** để xem ghi nhớ.
 
-Command dưới đây phải dán thành **một dòng**, thay `TOKEN_CUA_BAN` bằng PAT thật, không thêm dấu `\` nối dòng:
+Preview thành công chỉ xác nhận khả năng đọc/xử lý nguồn, chưa xác nhận quyền gửi Telegram. Không thấy thư mục `json` sau preview là bình thường.
+
+Lần gửi đầu chỉ xử lý bài phù hợp mới nhất, kể cả bài đó đã đăng từ nhiều ngày trước.
+
+## 7. Cấu hình cron hosting
+
+Workflow sử dụng **`workflow_dispatch`**. Bộ mã hiện tại không cấu hình lịch `schedule` của GitHub; hosting sẽ chủ động gọi API kích hoạt.
+
+### Quyền PAT GitHub
+
+PAT dùng trên hosting cần truy cập repository **GetLichThi** và quyền **Actions: Read and write**.
+
+Với fine-grained PAT:
+
+1. Mở GitHub cá nhân → **Settings → Developer settings → Personal access tokens → Fine-grained tokens**.
+2. Tạo token mới hoặc chỉnh token đang dùng.
+3. Trong **Repository access → Only select repositories**, chọn **GetLichThi**.
+4. Trong **Repository permissions**, đặt **Actions: Read and write**.
+5. Lưu và dùng token đó trong lệnh cron.
+
+Nếu dùng chung PAT với cron danh sách thi, giữ cả hai repository trong danh sách được phép truy cập. Không thay PAT bằng token bot Telegram.
+
+### Chu kỳ kiểm tra
+
+Có thể đặt mỗi 30 phút cho lịch thi. Điền các trường trong Cron Jobs:
+
+| Chu kỳ | Minute | Hour | Day | Month | Weekday |
+|---|---|---|---|---|---|
+| 5 phút | `*/5` | `*` | `*` | `*` | `*` |
+| 10 phút | `*/10` | `*` | `*` | `*` | `*` |
+| 30 phút | `*/30` | `*` | `*` | `*` | `*` |
+| 1 giờ | `0` | `*` | `*` | `*` | `*` |
+
+### Lệnh kích hoạt
+
+Thay `TOKEN_CUA_BAN` bằng PAT GitHub, rồi dán toàn bộ lệnh dưới đây thành **một dòng** vào trường Command:
 
 ```bash
 curl --fail --silent --show-error --max-time 30 -X POST -H "Accept: application/vnd.github+json" -H "Authorization: Bearer TOKEN_CUA_BAN" -H "Content-Type: application/json" "https://api.github.com/repos/cpcdev85/GetLichThi/actions/workflows/check_lichthi.yml/dispatches" -d '{"ref":"main","inputs":{"mode":"auto"}}' >/dev/null 2>&1
 ```
 
-Tùy chọn chu kỳ:
+Nếu đổi tên tài khoản/repository, cập nhật URL API tương ứng. Bản mã hiện tại lưu ghi nhớ cố định vào nhánh `main`; thay nhánh triển khai cần cập nhật cả code ghi nhớ và cấu hình liên quan.
 
-| Chu kỳ | Minute | Hour |
-|---|---|---|
-| 5 phút | `*/5` | `*` |
-| 10 phút | `*/10` | `*` |
-| 30 phút | `*/30` | `*` |
-| 1 giờ | `0` | `*` |
+`>/dev/null 2>&1` bỏ đầu ra của curl trên hosting. Khi kiểm tra lỗi gọi API, có thể tạm bỏ phần này và chạy lệnh trong terminal riêng. Log xử lý PDF/Telegram vẫn xem trong GitHub Actions.
 
-Day/Month/Weekday đều là `*`. Nếu đổi tên repo/nhánh, sửa URL và `ref` tương ứng. Cron chỉ yêu cầu GitHub tạo lượt chạy, không bảo đảm bắt đầu ngay đúng giây vì có thể xếp hàng. Độ trễ phát hiện gồm chu kỳ cron + thời gian chờ runner + tải/xử lý/gửi.
+Hosting gọi API chỉ tạo yêu cầu chạy; workflow có thể chờ runner. Các lượt do hosting kích hoạt hiển thị dưới sự kiện `workflow_dispatch`, không phải `schedule`.
 
-`>/dev/null 2>&1` bỏ toàn bộ đầu ra của curl trên hosting. Khi debug, tạm bỏ phần đó và chạy thử trong terminal riêng để xem HTTP lỗi; không đăng ảnh/lệnh có PAT thật. Log xử lý vẫn xem trong tab Actions. Lượt gọi từ hosting sẽ hiện là chạy qua `workflow_dispatch`.
+## 8. Nội dung gửi Telegram
 
-## 7. Cách chọn bài và phát hiện bản sửa
+Mỗi PDF hợp lệ tạo một bộ gồm **thông báo → PDF gốc → JSON đã xử lý**. Hai tài liệu được gửi dưới dạng file, gắn trả lời vào thông báo khi có message ID.
 
-Nguồn theo dõi:
+Ví dụ minh họa:
 
-- Trang chủ: https://ktdbcl.actvn.edu.vn/
-- Chuyên mục Lịch thi: https://ktdbcl.actvn.edu.vn/khao-thi/to-chuc-thi/lich-thi.html
+```text
+📢 CÓ LỊCH THI MỚI
 
-Giữ bộ lọc của file desktop:
+Kế hoạch Tổ chức thi KTHP Học kỳ 1 năm học 2026-2027. Đợt1 (Hệ KTXH)
+🔗 https://ktdbcl.actvn.edu.vn/457-ke-hoach-to-chuc-thi-kthp-hoc-ky-1-nam-hoc-2026-2027-dot1-he-ktxh.html
+Ngày chỉnh sửa: 06/Oct/2026
+Kiểm tra: 21/10/2026 18:00:02 (giờ Việt Nam)
 
-- Tiêu đề/link phải liên quan thi KTHP hoặc thi kết thúc học phần, có kế hoạch/lịch thi.
-- Trong đúng chuyên mục Lịch thi có thể chấp nhận một số tiêu đề thiếu chữ KTHP hoặc điều chỉnh hình thức thi.
-- Loại các thông báo phúc khảo, đính chính, nộp phí, học phí, tốt nghiệp, sát hạch, danh sách thi, kết quả/điểm thi, thời khóa biểu… như file gốc. Vì vậy thông báo có từ “đính chính” cũng đang bị loại; muốn nhận loại này cần sửa bộ lọc sau.
-- Chỉ lấy bài Joomla hợp lệ và PDF chính chủ ở `/files/`; hỗ trợ cả PDF nhúng qua PDF.js.
+📎 File: https://ktdbcl.actvn.edu.vn/files/thong-bao/ke-hoach-thi/ke-hoach-thi-kthp-dot1-hk1-nh2627.pdf
+```
 
-Lần gửi đầu: chỉ xử lý bài phù hợp có ID lớn nhất, ghi nhận các bài cũ đang thấy để không gửi hàng loạt lịch sử.
-
-Các lần sau: nhận bài mới chưa ghi nhận, kiểm tra lại các bài đã theo dõi nằm trong 3 bài phù hợp mới nhất. Các bài đang lỗi sẽ tiếp tục được thử, kể cả đã rời trang đầu. Không quét lại toàn bộ lịch sử, không bảo đảm phát hiện sửa ở mọi bài cũ.
-
-PDF được tải và so SHA256 mỗi lần kiểm tra bài tương ứng: đổi nội dung cùng URL vẫn được nhận ra. Cùng nội dung PDF ở nhiều link chỉ gửi một lần cho cùng nhóm/topic. Chỉ sửa tiêu đề hoặc metadata mà PDF không đổi sẽ không gửi lại. Đổi nhóm/topic được coi là đích nhận khác.
-
-## 8. Ghi nhớ, lỗi giữa chừng và tránh spam
-
-File riêng: **`json/lichthi_state.json` trên nhánh `main`** của repository GetLichThi. Không đọc hoặc ghi repository GetDanhSachThi. Khi nâng cấp, chỉ đọc nhánh cũ `kma-lichthi-state` để chuyển ghi nhớ nếu main chưa có file; mọi lần ghi đều vào main. Lỗi đọc bản cũ hoặc dữ liệu không hợp lệ sẽ dừng, không tự xóa lịch sử để bắt đầu lại.
-
-File chứa ID/URL/tiêu đề bài công khai, mã băm, thời gian và trạng thái/message ID Telegram. Không chứa token, chat ID gốc, nội dung PDF hoặc các dòng JSON lịch thi. Workflow không upload PDF/JSON lên artifact GitHub hoặc commit chúng vào repo; file chỉ tồn tại tạm trên runner để gửi Telegram.
-
-Mỗi bộ tin có 3 bước: `notice`, `pdf`, `json`. Trước mỗi lần gửi lưu `sending`; khi Telegram xác nhận thì lưu `sent`. Các bước `sent` không tự gửi lại. Ví dụ tin nhắn và PDF đã gửi, JSON bị Telegram từ chối rõ ràng thì lần sau chỉ thử gửi JSON.
-
-Nếu timeout/mất kết nối hoặc không lưu được trạng thái sau khi gửi, không thể biết chắc Telegram đã nhận hay chưa. Tool giữ `sending` và dừng để không tự spam. Không thể bảo đảm tuyệt đối gửi đúng một lần khi mạng bị gián đoạn.
-
-Cách xử lý khi log báo `sending`:
-
-1. Tạm tắt cron lịch thi để tránh các lượt kiểm tra chen vào.
-2. Kiểm tra tin/PDF/JSON trong nhóm.
-3. Nếu bước đó **chưa nhận**, chạy thủ công mode `send` và bật `retry_uncertain=true`. Chỉ các bước đang sending/chưa gửi được thử; bước sent giữ nguyên. Nếu bước đó thực ra đã đến, thao tác này có thể tạo bản trùng.
-4. Nếu bước đó **đã nhận**, chọn nhánh `main`, mở `json/lichthi_state.json`, tìm delivery có mã đầu tương ứng trong log và đổi riêng trạng thái bước đó từ `sending` sang `sent`. Có thể điền `message_id` dạng số nếu biết (lấy từ liên kết tin nhắn); nếu không thì bỏ qua message_id, các tài liệu tiếp theo vẫn gửi được nhưng có thể không gắn reply vào thông báo. Không xóa toàn bộ file hay delivery.
-5. Chạy lại `send` với retry_uncertain=false để gửi những phần còn thiếu, rồi bật lại cron.
-
-Telegram trả mã 400/401/403/404/429 rõ ràng: bước bị từ chối không đánh dấu sent; kiểm tra chat ID, token, quyền gửi/topic hoặc chờ hết giới hạn trước khi chạy lại. Lỗi 429 không tự gửi dồn/retry ngay trong cùng lượt.
-
-Nếu không ghi được file ghi nhớ, tool dừng trước lần gửi tiếp theo. Nếu có thay đổi đồng thời trên main, bộ lịch thi chỉ thử lại khi chính file lịch thi vẫn không thay đổi. Không cần thay đổi repository danh sách thi.
-
-## 9. Tắt hoặc xóa lịch thi về sau
-
-Tạm tắt:
-
-1. Đặt Variable `KMA_ENABLE_LICHTHI=false` để các lượt mode auto thoát ngay.
-2. Tắt cron hosting gọi `check_lichthi.yml`.
-3. Nếu muốn, vào Actions → KMA Lich Thi Telegram → menu ba chấm → Disable workflow.
-
-Mode `send` thủ công vẫn có thể gửi dù Variable false. Nếu một lượt đã bắt đầu trước lúc tắt, hủy riêng lượt lịch thi đó trong Actions nếu cần dừng ngay.
-
-Ngừng dùng lâu dài: tắt cron GetLichThi, hủy các lượt GetLichThi đang chạy rồi Disable workflow; có thể Archive repository GetLichThi để giữ code và ghi nhớ. Nếu quyết định xóa hẳn repo GetLichThi thì ghi nhớ cũng mất, cài lại có thể gửi lại lịch cũ. Không thao tác với repo GetDanhSachThi. Không thu hồi PAT hosting đang dùng chung hoặc thu hồi token bot còn được hệ thống khác sử dụng.
-
-Hai repository chạy độc lập, không chờ nhau theo thiết kế. Chúng vẫn chia sẻ tài nguyên/giới hạn của tài khoản GitHub và truy cập cùng website nguồn, nên không thể cam kết tuyệt đối không có chờ đợi. Bộ này không thêm bước tải PDF/gửi Telegram vào luồng danh sách thi.
-
-## 10. Kiểm tra lỗi nhanh
-
-| Hiện tượng | Kiểm tra |
+| Thông tin | Cách xác định |
 |---|---|
-| Chạy preview xanh nhưng nhóm chưa có tin | Preview không gửi; chạy send sau khi thêm Secrets |
-| Auto thoát ngay | KMA_ENABLE_LICHTHI phải nằm ở Variables và bằng true |
-| Không có workflow lịch thi | Đường dẫn `.github/workflows/check_lichthi.yml` trên nhánh mặc định |
-| Cron không tạo lượt | PAT còn hiệu lực, Actions read/write, đúng repo/nhánh/workflow, workflow không bị Disable |
-| Không tạo file ghi nhớ | Preview không ghi; send cần contents write; xem main/json/lichthi_state.json |
-| PDF lỗi hoặc JSON không đọc được | Mở nguồn kiểm tra; PDF scan/bố cục khác không có OCR tự động |
-| Không phát hiện bài mong muốn | So điều kiện lọc ở mục 7; không quét tất cả trang lịch sử |
-| Lượt bị đỏ, log có sending | Xử lý theo mục 8, không xóa ghi nhớ để thử lại |
+| Tiêu đề | Lấy từ bài thông báo |
+| Link bài | Đường dẫn mở thông báo gốc |
+| Ngày chỉnh sửa | Ưu tiên Last-Modified của PDF; nếu thiếu dùng metadata ngày sửa bài |
+| Thời điểm kiểm tra | Thời gian bắt đầu lượt chạy, theo giờ Việt Nam |
+| File PDF | Tài liệu gốc tải từ website trường |
+| File JSON | Dữ liệu lịch thi đã trích xuất, chuẩn hóa và gộp ca |
 
-Tài liệu chính thức:
+Nếu nguồn không có thông tin ngày sửa, thông báo ghi **Không có thông tin từ nguồn**. Không lấy thời điểm kiểm tra thay cho ngày sửa.
 
-- Telegram Bot API: https://core.telegram.org/bots/api#senddocument
-- Tạo bot: https://core.telegram.org/bots/tutorial#obtain-your-bot-token
-- Workflow dispatch: https://docs.github.com/en/rest/actions/workflows#create-a-workflow-dispatch-event
-- GitHub Actions Secrets: https://docs.github.com/en/actions/security-for-github-actions/security-guides/using-secrets-in-github-actions
+JSON gồm bốn trường: `Môn thi`, `Hình thức thi`, `Khóa đào tạo`, `Thời gian bắt đầu thi`. Bài có nhiều PDF đọc được sẽ tạo một bộ tin cho mỗi PDF có nội dung chưa gửi.
+
+## 9. Phạm vi theo dõi và xử lý PDF
+
+### Chọn thông báo
+
+Bộ lọc tìm các tiêu đề/link liên quan kế hoạch hoặc lịch thi **KTHP / kết thúc học phần**. Trong đúng chuyên mục Lịch thi, một số tiêu đề thiếu chữ KTHP hoặc điều chỉnh hình thức thi vẫn có thể được nhận.
+
+Các nhóm thông báo bị loại gồm: phúc khảo, đính chính, nộp phí/học phí, tốt nghiệp, sát hạch, danh sách thi, kết quả/điểm thi và thời khóa biểu. Theo bộ lọc hiện tại, tiêu đề có chữ **đính chính** cũng bị loại dù có liên quan lịch thi.
+
+Chỉ tải PDF trên tên miền `ktdbcl.actvn.edu.vn`, trong đường dẫn `/files/`. Hỗ trợ cả link trực tiếp và PDF nhúng qua PDF.js.
+
+### Theo dõi bài mới và bản sửa
+
+- **Lần đầu:** xử lý bài phù hợp có ID lớn nhất; ghi nhận các bài cũ đang thấy để tránh gửi toàn bộ lịch sử.
+- **Các lần sau:** nhận bài mới chưa ghi nhận, kiểm tra lại các bài đã theo dõi nằm trong ba bài phù hợp mới nhất.
+- **Bài đang lỗi:** tiếp tục thử lại, kể cả khi bài đã rời trang đầu.
+- **PDF thay đổi:** so SHA-256 để nhận ra nội dung mới ngay cả khi URL giữ nguyên.
+- **PDF trùng nội dung:** chỉ gửi một lần cho cùng nhóm/topic. Chỉ sửa tiêu đề hoặc metadata mà PDF không đổi thì không gửi lại.
+
+Không quét lại toàn bộ bài cũ; sửa đổi ở bài ngoài phạm vi theo dõi có thể không được phát hiện.
+
+### Định dạng hỗ trợ
+
+Công cụ đọc **PDF có bảng và văn bản**, sử dụng cách chuẩn hóa khóa KMA/KMP và gộp ca từ công cụ desktop. Chưa có OCR tự động cho ảnh hoặc PDF scan.
+
+PDF không đọc được theo định dạng hỗ trợ sẽ báo lỗi, chưa gửi bộ tin tương ứng và được thử lại sau. Với bố cục mới, cần kiểm tra nội dung JSON trước khi sử dụng. Giới hạn tải PDF hiện tại là **49 MiB**.
+
+## 10. Ghi nhớ và chống gửi lặp
+
+Đường dẫn lưu: **`main/json/lichthi_state.json`**.
+
+File chứa ID/URL/tiêu đề bài công khai, mã băm nội dung, thời gian và trạng thái/message ID Telegram. Không lưu token, chat ID gốc, PDF hoặc các dòng JSON lịch thi vào ghi nhớ.
+
+Workflow không commit PDF/JSON kết quả hoặc tải chúng lên GitHub Artifacts. Tài liệu được xử lý tạm trên runner để gửi Telegram.
+
+Mỗi bộ tin có ba bước:
+
+| Bước | Nội dung | Trạng thái |
+|---|---|---|
+| `notice` | Tin thông báo | `sending` trước khi gửi, `sent` sau khi xác nhận |
+| `pdf` | PDF gốc | `sending` trước khi gửi, `sent` sau khi xác nhận |
+| `json` | JSON đã xử lý | `sending` trước khi gửi, `sent` sau khi xác nhận |
+
+Bước đã `sent` không tự gửi lại. Ví dụ thông báo và PDF đã hoàn tất nhưng JSON bị từ chối rõ ràng, lần sau chỉ thử gửi JSON.
+
+Nếu mất kết nối hoặc không lưu được xác nhận sau khi gửi, trạng thái có thể còn `sending`. Hệ thống dừng để tránh tự gửi lặp vì chưa biết Telegram đã nhận hay chưa. Không thể bảo đảm gửi đúng một lần trong mọi tình huống gián đoạn mạng.
+
+### Xử lý trạng thái sending
+
+1. Tạm tắt cron lịch thi và chờ/hủy các lượt đang chạy.
+2. Kiểm tra trong nhóm xem bước tương ứng đã nhận hay chưa.
+3. **Chưa nhận:** chạy `send`, bật `retry_uncertain=true` để thử lại bước chưa xác nhận. Nếu thực tế đã nhận thì thao tác này có thể tạo bản trùng.
+4. **Đã nhận:** mở file ghi nhớ trên main, tìm delivery có mã đầu tương ứng trong log, đổi riêng trạng thái bước đó từ `sending` thành `sent`. Có thể điền `message_id` dạng số nếu biết; thiếu ID thì tài liệu tiếp theo có thể không gắn reply.
+5. Chạy lại `send` với `retry_uncertain=false` để hoàn tất phần còn thiếu, rồi bật lại cron.
+
+Không xóa toàn bộ ghi nhớ để kiểm tra cron hoặc xử lý một bước lỗi.
+
+## 11. Cập nhật, tạm dừng và ngừng sử dụng
+
+### Cập nhật mã nguồn
+
+1. Tạm tắt cron GetLichThi, chờ/hủy các lượt đang chạy.
+2. Thay các file cần cập nhật trên `main`; giữ nguyên `json/lichthi_state.json`.
+3. Chạy `preview`, sau đó `send` nếu cần xác nhận hoạt động gửi.
+4. Kiểm tra log, trạng thái và nhóm nhận trước khi bật lại cron.
+
+Chỉ cập nhật README thì thay riêng `README.md`; không cần thay code, Secrets hoặc cron.
+
+### Chuyển ghi nhớ từ bản dùng nhánh riêng
+
+Bản hiện tại tự chuyển ghi nhớ từ nhánh cũ **`kma-lichthi-state`** khi main chưa có file:
+
+1. Giữ nguyên nhánh cũ, cập nhật `kma_lichthi_actions.py` trên main.
+2. Chạy `send` hoặc `auto` đang bật.
+3. Công cụ đọc, kiểm tra và sao chép ghi nhớ sang main trước khi gửi tiếp.
+4. Kiểm tra file `json/lichthi_state.json` trên main và log chuyển ghi nhớ.
+
+Giữ nguyên trạng thái `sent`/`sending` trong quá trình chuyển. Nếu main đã có file thì ưu tiên main, không ghi đè bằng bản cũ. Nhánh cũ không bị tự xóa. Preview không thực hiện chuyển ghi nhớ.
+
+### Tạm dừng
+
+- Đặt Variable `KMA_ENABLE_LICHTHI=false` để các lượt `auto` thoát ngay.
+- Tắt cron hosting của GetLichThi để ngừng tạo lượt chạy.
+- Có thể Disable workflow **KMA Lich Thi Telegram** trong Actions.
+
+Mode `send` thủ công vẫn gửi khi Variable false. Muốn dừng ngay lượt đã bắt đầu thì hủy lượt đó trong Actions.
+
+### Ngừng sử dụng
+
+Tắt cron và workflow rồi có thể Archive repository để giữ mã nguồn, cấu hình và lịch sử. Nếu xóa repo, ghi nhớ cũng mất; cài lại có thể gửi lại lịch cũ.
+
+Không thu hồi PAT hoặc token bot đang được hệ thống khác sử dụng. Hai repository độc lập về code và ghi nhớ nhưng vẫn chia sẻ tài nguyên/giới hạn theo tài khoản GitHub và giới hạn gửi của bot Telegram dùng chung.
+
+## 12. Khắc phục sự cố
+
+| Hiện tượng | Nguyên nhân hoặc hướng kiểm tra |
+|---|---|
+| Preview xanh nhưng Telegram chưa nhận | Preview không gửi; chạy send để kiểm tra bot |
+| Auto kết thúc ngay | Variable KMA_ENABLE_LICHTHI thiếu hoặc không bằng true |
+| Không thấy workflow | Kiểm tra đường dẫn `.github/workflows/check_lichthi.yml` trên nhánh mặc định |
+| Cron không tạo lượt chạy | Kiểm tra PAT, quyền Actions, repository, ref main và trạng thái workflow |
+| Không thấy thư mục json | Preview không tạo; send/auto cần ghi thành công trên main |
+| Không ghi được trạng thái | Kiểm tra contents: write, chính sách repository và bảo vệ nhánh |
+| Telegram báo 400/401/403/404 | Kiểm tra token, ID nhóm/topic, quyền gửi và tư cách thành viên của bot |
+| Telegram báo 429 | Chờ hết giới hạn gửi rồi chạy lại; công cụ không gửi dồn ngay trong cùng lượt |
+| Log báo sending | Kiểm tra nhóm và làm theo mục 10; không xóa ghi nhớ |
+| PDF không đọc được | Kiểm tra PDF scan, bố cục bảng và giới hạn kích thước |
+| Bài mong muốn không được nhận | Đối chiếu bộ lọc và phạm vi theo dõi ở mục 9 |
+| Bản cũ không chuyển được ghi nhớ | Giữ bản cũ; kiểm tra quyền đọc và dữ liệu hợp lệ trước khi chạy tiếp |
+
+## 13. Tài liệu tham khảo
+
+- [Telegram Bot API — sendDocument](https://core.telegram.org/bots/api#senddocument)
+- [GitHub — Workflow dispatch](https://docs.github.com/en/rest/actions/workflows#create-a-workflow-dispatch-event)
+- [GitHub — Sử dụng Secrets trong Actions](https://docs.github.com/en/actions/security-for-github-actions/security-guides/using-secrets-in-github-actions)
+- [GitHub — Cú pháp workflow](https://docs.github.com/en/actions/writing-workflows/workflow-syntax-for-github-actions)
