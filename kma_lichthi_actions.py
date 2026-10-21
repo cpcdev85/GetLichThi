@@ -179,7 +179,7 @@ def modified_date(raw):
 
 def notice_text(article, pdf_url, modified, checked):
     title = core.clean(article["title"])[:600]
-    return (f"📢 CÓ LỊCH THI MỚI\n\n{title}\n"
+    return (f"📢 CÓ LỊCH THI MỚI\n\n{title}\n\n"
             f"🔗 {article['url']}\nNgày chỉnh sửa: {modified_date(modified)}\n"
             f"Kiểm tra: {checked} (giờ Việt Nam)\n\n📎 File: {pdf_url}")
 
