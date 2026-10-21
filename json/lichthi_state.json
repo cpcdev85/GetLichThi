@@ -7,7 +7,17 @@
       "url": "https://ktdbcl.actvn.edu.vn/457-ke-hoach-to-chuc-thi-kthp-hoc-ky-1-nam-hoc-2026-2027-dot1-he-ktxh.html"
     }
   },
-  "deliveries": {},
+  "deliveries": {
+    "446ebb32641c9bccb8a332bacf2a6b20f4f21920f582edf993427d11d89d914e": {
+      "checked": "21/10/2026 20:42:37",
+      "steps": {
+        "notice": {
+          "status": "sending",
+          "time": "2026-10-21T13:42:46.150124+00:00"
+        }
+      }
+    }
+  },
   "initialized": true,
   "known_articles": [
     "300",
